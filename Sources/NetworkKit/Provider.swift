@@ -35,17 +35,9 @@ public struct Provider<T: Requestable> {
     
     @discardableResult
     public func request<Wrapper: ResponseWrapper>(_ request: T, wrapperType: Wrapper.Type = Wrapper.self, competionHandler: @escaping ResponseCompletion, errorHandler: ResponseErrorHandler? = nil) -> Cancelable {
-        plugins?.forEach({ $0.willSend(request: request) })
-        return dispatcher.execute(request: request, callbackQueue: callbackQueue) { response in
-            Wrapper(response: response).getData(competionHandler: { data in
-                plugins?.forEach({ $0.didReceive(response: response) })
-                competionHandler()
-            }, errorHandler: { error in
-                plugins?.forEach({ $0.didReceive(response: (data: response.data, response: response.response, error: error)) })
-                errorHandler?(error)
-            })
-            plugins?.forEach({ $0.didReceive(response: response) })
-        }
+        self.request(request, wrapperType: wrapperType, competionHandler: { data in
+            competionHandler()
+        }, errorHandler: errorHandler)
     }
     
     @discardableResult
