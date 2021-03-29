@@ -1,5 +1,5 @@
 //
-//  DefaultDecodableRequest.swift
+//  DecodableRequestBuilder.swift
 //
 //
 //  Created by ArtS on 26.03.21.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct DefaultDecodableRequest<Output: Decodable>: DecodableRequestable {
+public struct DecodableRequestBuilder<Output: Decodable>: DecodableRequestable {
     public let path: String
     public let method: HTTPMethod
     public let parameters: Parameter?

@@ -27,14 +27,16 @@ public extension Requestable {
 
 extension Requestable {
     func build() -> URLRequest {
-        guard var components = URLComponents(string: environment.baseUrl) else { fatalError("Wrong Base URL") }
-        components.path += path
+        guard var components = URLComponents(string: environment.baseUrl + "/\(path)") else { fatalError("Wrong Base URL") }
         if case let .query(queryItems) = parameters {
             components.queryItems = queryItems
         }
         guard let url = components.url else { fatalError("Wrong URL Path") }
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method.rawValue
+        headers?.forEach({ (header) in
+            urlRequest.addValue(header.value, forHTTPHeaderField: header.name)
+        })
         if case let .httpBody(body) = parameters {
             urlRequest.httpBody = body.toJSONData()
         }
