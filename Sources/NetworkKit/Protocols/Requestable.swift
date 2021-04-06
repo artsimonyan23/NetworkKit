@@ -15,24 +15,20 @@ public protocol Requestable {
     var environment: Environmental { get }
 }
 
-public extension Requestable {
-    var parameters: Parameter? {
-        return nil
-    }
-
-    var headers: HTTPHeaders? {
-        return nil
-    }
-}
-
 extension Requestable {
-    func build() -> URLRequest {
-        guard var components = URLComponents(string: environment.baseUrl + "/\(path)") else { fatalError("Wrong Base URL") }
+    func buildUrlRequest() -> URLRequest {
+//        var path = self.path
+//        if path.hasPrefix("/") {
+//            path.removeFirst()
+//        }
+        guard var url = URL(string: environment.baseUrl) else { fatalError("Wrong URL") }
+        url.appendPathComponent(path)
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { fatalError("Wrong URL") }
         if case let .query(queryItems) = parameters {
             components.queryItems = queryItems
         }
-        guard let url = components.url else { fatalError("Wrong URL Path") }
-        var urlRequest = URLRequest(url: url)
+        guard let componentUrl = components.url else { fatalError("Wrong URL") }
+        var urlRequest = URLRequest(url: componentUrl)
         urlRequest.httpMethod = method.rawValue
         headers?.forEach({ (header) in
             urlRequest.addValue(header.value, forHTTPHeaderField: header.name)
@@ -41,5 +37,19 @@ extension Requestable {
             urlRequest.httpBody = body.toJSONData()
         }
         return urlRequest
+    }
+    
+    public func buildRequest() -> RequestBuilder {
+        return RequestBuilder(path: path, method: method, parameters: parameters, headers: headers, environment: environment)
+    }
+    
+    public func buildRequest<T: Decodable>() -> DecodableRequestBuilder<T> {
+        return DecodableRequestBuilder(path: path, method: method, parameters: parameters, headers: headers, environment: environment)
+    }
+}
+
+extension Requestable where Self: DecodableRequestable {
+    public func buildRequest() -> DecodableRequestBuilder<Output> {
+        return DecodableRequestBuilder(path: path, method: method, parameters: parameters, headers: headers, environment: environment)
     }
 }

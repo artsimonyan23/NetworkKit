@@ -11,24 +11,24 @@ public struct Provider<T: Requestable> {
     private let dispatcher: NetworkDispatcher
     private let callbackQueue: DispatchQueue
     private let plugins: [PluginType]?
-    private let responseWrapper: ResponseWrapper?
 
-    public init(dispatcher: NetworkDispatcher = DefaultDispatcher(), callbackQueue: DispatchQueue = .main, responseWrapper: ResponseWrapper? = nil, plugins: [PluginType]? = nil) {
+    public init(dispatcher: NetworkDispatcher = DefaultDispatcher(), callbackQueue: DispatchQueue = .main, plugins: [PluginType]? = nil) {
         self.dispatcher = dispatcher
         self.callbackQueue = callbackQueue
         self.plugins = plugins
-        self.responseWrapper = responseWrapper
     }
 
     @discardableResult
     public func request(_ request: T, completionHandler: @escaping ResponseCompletionWith<Data>, errorHandler: ResponseErrorHandler? = nil) -> Cancelable {
         plugins?.forEach({ $0.willSend(request: request) })
         return dispatcher.execute(request: request, callbackQueue: callbackQueue) { response in
-            let response = responseWrapper?(response) ?? response
             plugins?.forEach({ $0.didReceive(response: response) })
+            let response = plugins?.reduce(response) { $1.modify(response: $0) } ?? response
             if let data = response.data {
+                plugins?.forEach({ $0.willReturn(response: response) })
                 completionHandler(data)
             } else {
+                plugins?.forEach({ $0.willReturn(response: (data: nil, response: response.response, error: response.error)) })
                 errorHandler?(response.error)
             }
         }
@@ -43,21 +43,20 @@ public struct Provider<T: Requestable> {
 
     @discardableResult
     public func request<Data>(_ request: T, decodder: @escaping DataWrapper<Data>, completionHandler: @escaping ResponseCompletionWith<Data>, errorHandler: ResponseErrorHandler? = nil) -> Cancelable {
-        self.request(request, completionHandler: { data in
-            decodder(data, completionHandler, errorHandler)
-        }, errorHandler: errorHandler)
         plugins?.forEach({ $0.willSend(request: request) })
         return dispatcher.execute(request: request, callbackQueue: callbackQueue) { response in
-            let response = responseWrapper?(response) ?? response
+            plugins?.forEach({ $0.didReceive(response: response) })
+            let response = plugins?.reduce(response) { $1.modify(response: $0) } ?? response
             if let data = response.data {
                 decodder(data, { data in
-                    plugins?.forEach({ $0.didReceive(response: response) })
+                    plugins?.forEach({ $0.willReturn(response: response) })
                     completionHandler(data)
                 }, { error in
-                    plugins?.forEach({ $0.didReceive(response: (data: nil, response: response.response, error: error)) })
+                    plugins?.forEach({ $0.willReturn(response: (data: nil, response: response.response, error: error)) })
                     errorHandler?(error)
                 })
             } else {
+                plugins?.forEach({ $0.willReturn(response: (data: nil, response: response.response, error: response.error)) })
                 errorHandler?(response.error)
             }
         }

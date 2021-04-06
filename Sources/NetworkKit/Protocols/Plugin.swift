@@ -10,9 +10,15 @@ import Foundation
 public protocol PluginType {
     func willSend(request: Requestable)
     func didReceive(response: Response)
+    func modify(response: Response) -> Response
+    func willReturn(response: Response)
 }
 
 public extension PluginType {
     func willSend(request: Requestable) { }
-    func didReceive(result: Result<Data, Error>) { }
+    func didReceive(response: Response) { }
+    func modify(response: Response) -> Response {
+        return response
+    }
+    func willReturn(response: Response) { }
 }

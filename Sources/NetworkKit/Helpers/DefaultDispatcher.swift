@@ -19,7 +19,7 @@ public struct DefaultDispatcher: NetworkDispatcher {
     }
     
     public func execute(request: Requestable, callbackQueue: DispatchQueue, completion: @escaping ResponseCompletionWith<Response>) -> Cancelable {
-        let dataTask = session.dataTask(with: request.build()) { (data, response, error) in
+        let dataTask = session.dataTask(with: request.buildUrlRequest()) { (data, response, error) in
             callbackQueue.async {
                 completion((data, response, error))
             }
