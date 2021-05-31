@@ -22,7 +22,7 @@ extension Requestable {
 //            path.removeFirst()
 //        }
         guard var url = URL(string: environment.baseUrl) else { fatalError("Wrong URL") }
-        url.appendPathComponent(path)
+        url.appendPathComponent(path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { fatalError("Wrong URL") }
         if case let .query(queryItems) = parameters {
             components.queryItems = queryItems
